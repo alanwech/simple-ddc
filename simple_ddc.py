@@ -13,7 +13,7 @@ import time
 
 # Globals
 DEBOUNCING_DELAY = 300  # ms
-REFRESH_RATE = 10000    # ms (10s)
+REFRESH_RATE = 20000    # ms (20s)
 
 # ── DDC helpers ──────────────────────────────────────────────────────────────
 
@@ -454,7 +454,7 @@ class SimpleDDC(tk.Tk):
         self.title("simple-ddc")
         self.configure(bg=BG)
         self.resizable(True, True)
-        self.minsize(600, 260)
+        self.minsize(1100, 400)
 
         self._cards: list[MonitorCard] = []
         self._auto_refresh_id = None
@@ -650,7 +650,7 @@ def main():
 
     # Center on screen
     app.update_idletasks()
-    w, h = 800, 480
+    w, h = 1100, 400
     sw = app.winfo_screenwidth()
     sh = app.winfo_screenheight()
     app.geometry(f"{w}x{h}+{(sw-w)//2}+{(sh-h)//2}")
