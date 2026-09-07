@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=simple-ddc
+Comment=DDC/CI monitor brightness controller
+Exec=python3 /opt/simple-ddc/simple_ddc.py
+Icon=video-display
+Terminal=false
+Type=Application
+Categories=Settings;HardwareSettings;
+Keywords=monitor;brightness;ddc;display;
+StartupNotify=false

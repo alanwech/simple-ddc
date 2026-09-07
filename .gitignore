@@ -1,0 +1,11 @@
+# OS
+__pycache__/
+.venv/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# AI
+.codegraph/
