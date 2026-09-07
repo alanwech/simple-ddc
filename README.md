@@ -76,9 +76,5 @@ sudo cp simple-ddc.desktop /usr/share/applications/
 
 ## Tested on
 
-- Fedora 40 / 41 (Wayland + X11)
-- Monitors connected via DisplayPort and HDMI
-
-## License
-
-MIT
+- Fedora 44 (Wayland)
+- Monitors connected via DisplayPort

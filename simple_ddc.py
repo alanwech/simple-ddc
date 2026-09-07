@@ -9,7 +9,11 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 import re
+import time
 
+# Globals
+DEBOUNCING_DELAY = 300  # ms
+REFRESH_RATE = 10000    # ms (10s)
 
 # ── DDC helpers ──────────────────────────────────────────────────────────────
 
@@ -39,7 +43,7 @@ def detect_monitors() -> list[dict]:
     """
     Parse `ddcutil detect` output.
     Returns a list of dicts:
-      { bus, display_num, model, serial, edid_hex, mfr }
+      { bus, display_num, model, serial, mfr, connector }
     """
     rc, out, err = run(["ddcutil", "detect", "--brief"])
     if rc != 0:
@@ -191,6 +195,8 @@ class MonitorCard(tk.Frame):
         self._info_visible = False
         self._set_timers: dict[str, str | None] = {"10": None, "12": None}
         self._pending_values: dict[str, int | None] = {"10": None, "12": None}
+        self._is_refreshing = False  # Prevent overlapping refreshes
+        self._last_refresh_time = 0.0
 
         self._build()
         self.refresh()
@@ -340,7 +346,7 @@ class MonitorCard(tk.Frame):
         if self._set_timers[feature]:
             self.after_cancel(self._set_timers[feature])
         # debounce: apply 300 ms after last drag event
-        self._set_timers[feature] = self.after(300, lambda: self._apply_control(feature))
+        self._set_timers[feature] = self.after(DEBOUNCING_DELAY, lambda: self._apply_control(feature))
 
     def _apply_control(self, feature: str):
         if self._pending_values[feature] is None:
@@ -363,14 +369,22 @@ class MonitorCard(tk.Frame):
     # ── Refresh (read current value) ──────────────────────────────────────────
 
     def refresh(self):
+        # Prevent overlapping refresh threads
+        if self._is_refreshing:
+            return
+        self._is_refreshing = True
+        self._last_refresh_time = time.time()
         self._status_label.config(text="Reading…", fg=SUBTEXT)
         self._brightness_scale.state(["disabled"])
         self._contrast_scale.state(["disabled"])
 
         def worker():
-            brightness = get_vcp(self.monitor["display_num"], "10")
-            contrast = get_vcp(self.monitor["display_num"], "12")
-            self.after(0, lambda: self._apply_read(brightness, contrast))
+            try:
+                brightness = get_vcp(self.monitor["display_num"], "10")
+                contrast = get_vcp(self.monitor["display_num"], "12")
+                self.after(0, lambda: self._apply_read(brightness, contrast))
+            finally:
+                self._is_refreshing = False
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -440,7 +454,7 @@ class SimpleDDC(tk.Tk):
         self.title("simple-ddc")
         self.configure(bg=BG)
         self.resizable(True, True)
-        self.minsize(560, 260)
+        self.minsize(600, 260)
 
         self._cards: list[MonitorCard] = []
         self._auto_refresh_id = None
@@ -490,7 +504,7 @@ class SimpleDDC(tk.Tk):
 
         self._auto_var = tk.BooleanVar(value=True)
         tk.Checkbutton(
-            toolbar, text="Auto-refresh (5s)",
+            toolbar, text="Auto-refresh (10s)",
             variable=self._auto_var,
             font=("Segoe UI", 9), bg=BG, fg=SUBTEXT,
             selectcolor=BTN_BG, activebackground=BG,
@@ -535,9 +549,9 @@ class SimpleDDC(tk.Tk):
 
     def _on_mousewheel(self, event):
         if event.num == 4:
-            self._canvas.yview_scroll(-1, "units")
+            self._canvas.yview_scroll(-2, "units")
         elif event.num == 5:
-            self._canvas.yview_scroll(1, "units")
+            self._canvas.yview_scroll(2, "units")
         else:
             self._canvas.yview_scroll(int(-event.delta / 120), "units")
 
@@ -607,7 +621,7 @@ class SimpleDDC(tk.Tk):
             text=msg,
             font=("Segoe UI", 10),
             bg=SURFACE, fg=RED if error else TEXT,
-            justify="left", wraplength=520, pady=16, padx=16,
+            justify="left", wraplength=600, pady=16, padx=16,
         ).pack(fill="x")
 
     # ── Auto-refresh ──────────────────────────────────────────────────────────
@@ -623,7 +637,7 @@ class SimpleDDC(tk.Tk):
     def _schedule_auto_refresh(self):
         if not self._auto_var.get():
             return
-        self._auto_refresh_id = self.after(5000, self._auto_refresh)
+        self._auto_refresh_id = self.after(REFRESH_RATE, self._auto_refresh)
 
     def _auto_refresh(self):
         for card in self._cards:
@@ -636,7 +650,7 @@ def main():
 
     # Center on screen
     app.update_idletasks()
-    w, h = 640, 440
+    w, h = 800, 480
     sw = app.winfo_screenwidth()
     sh = app.winfo_screenheight()
     app.geometry(f"{w}x{h}+{(sw-w)//2}+{(sh-h)//2}")
