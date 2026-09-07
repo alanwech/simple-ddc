@@ -2,7 +2,7 @@
 
 A lightweight DDC/CI monitor brightness controller for Linux — a Monitorian-style GUI built with only Python + tkinter (no extra packages needed).
 
-![screenshot placeholder](https://via.placeholder.com/520x300/1E1E2E/CDD6F4?text=simple-ddc)
+![screenshot placeholder](https://via.placeholder.com/640x300/1E1E2E/CDD6F4?text=simple-ddc)
 
 ## Features
 
@@ -10,8 +10,9 @@ A lightweight DDC/CI monitor brightness controller for Linux — a Monitorian-st
 - ☀ **Real-time brightness slider** with debounced writes
 - ◐ **Contrast slider** when supported by the monitor
 - 📊 **Details panel** per monitor: brightness, contrast, colour preset, connector and bus
-- 🔄 **Auto-refresh** every 5 s (toggleable)
+- 🔄 **Auto-refresh** every 10s (toggleable)
 - 🚫 **Zero pip dependencies** — only Python 3 stdlib + tkinter
+- ⚡ **No lag** — thread-safe refresh with per-monitor guards
 
 ## Requirements
 
@@ -28,7 +29,7 @@ A lightweight DDC/CI monitor brightness controller for Linux — a Monitorian-st
 sudo dnf install -y ddcutil python3-tkinter
 
 # 2. Clone the repo
-git clone https://github.com/YOUR_USERNAME/simple-ddc
+git clone https://github.com/alanwech/simple-ddc
 cd simple-ddc
 
 # 3. Grant your user DDC access (run once, then log out/in)
@@ -64,6 +65,8 @@ sudo cp simple_ddc.py /opt/simple-ddc/
 sudo cp simple-ddc.desktop /usr/share/applications/
 ```
 
+Then search for "simple-ddc" in your app launcher.
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -73,8 +76,25 @@ sudo cp simple-ddc.desktop /usr/share/applications/
 | Slider has no effect | Some monitors need `--sleep-multiplier 2` — edit `run()` in `simple_ddc.py` |
 | Contrast shows `n/a` | That monitor does not expose VCP `0x12` through DDC/CI |
 | Display not listed | Run `ddcutil detect` in a terminal to debug |
+| App lags / stutters | Disable auto-refresh if you have >2 monitors or slow I2C buses |
 
 ## Tested on
 
-- Fedora 44 (Wayland)
-- Monitors connected via DisplayPort
+- Fedora 40+ (Wayland + X11)
+- Monitors connected via DisplayPort and HDMI
+
+## Architecture
+
+- **Language:** Python 3 (stdlib only)
+- **GUI:** tkinter + ttk
+- **Backend:** ddcutil (spawned as subprocess)
+- **Threading:** Per-monitor refresh guards prevent thread pile-up on slow I2C buses
+- **Debouncing:** 300ms delay on slider input to reduce monitor write spam
+
+## License
+
+MIT
+
+---
+
+Made for Fedora. Works on any Linux with ddcutil + i2c access.
